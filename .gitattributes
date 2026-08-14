@@ -1,0 +1,21 @@
+# Keep SQL migration files as LF regardless of platform — sqlx computes a
+# SHA-384 of the file contents on each startup and compares it to what's
+# stored in `_sqlx_migrations`. If git silently converts LF -> CRLF on
+# checkout (Windows default), the embedded checksum diverges and Climax
+# refuses to start with "migration X was previously applied but has been
+# modified".
+*.sql text eol=lf
+
+# Same logic for Rust / TypeScript / Svelte — keep LF everywhere so checksums
+# stay stable across machines. Doesn't affect anyone's editor; just keeps the
+# repo bytes consistent.
+*.rs text eol=lf
+*.ts text eol=lf
+*.svelte text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.vbs text eol=lf
+
+# Batch files traditionally use CRLF — leave alone.
+*.bat text eol=crlf

@@ -1,0 +1,826 @@
+/* Browse "card design system" — tiles + detail panel, shared across the four
+   browse pages. Loaded once (imported by BrowsePage.svelte) and global; all
+   classes are cx- prefixed to avoid collisions with scoped component styles.
+   Depends on the design tokens defined in the dashboard :root.
+
+   The interactive controls (search bar, filter bar, filter menu) are separate
+   scoped Svelte components and intentionally NOT styled here. */
+
+/* ============================================================ CHASSIS */
+.cx-browse {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* At least fill the content area (bottom pager → page bottom via
+     margin-top:auto on .cx-pager), but GROW + let .content scroll for a tall
+     grid (Rows=50/100) or a tall detail. flex-shrink:0 stops .content from
+     clamping us to its height, which would kill scrolling. */
+  flex-shrink: 0;
+  min-height: 100%;
+}
+.cx-browse-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 2px 0;
+}
+
+/* ============================================================ PAGER
+   Mirrors the Sessions table pager (rows-per-page + range + Prev/Next). */
+.cx-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px;
+  /* Push to the bottom of the page in the Fit case (short grid); collapses to
+     no extra space when the grid is tall enough to scroll. */
+  margin-top: auto;
+}
+.cx-pager-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cx-rows {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.cx-rows select {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 7px;
+  padding: 4px 7px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--dur-2);
+}
+.cx-rows select:hover { border-color: var(--border-strong); }
+.cx-rows select:focus { outline: none; border-color: var(--accent); }
+.cx-range {
+  font-size: 12px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cx-pager-btns { display: flex; gap: 6px; }
+.cx-pgbtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background var(--dur-2), border-color var(--dur-2), color var(--dur-2);
+}
+.cx-pgbtn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.cx-pgbtn:disabled { opacity: 0.4; cursor: default; }
+
+/* ============================================================ GRID */
+.cx-grid {
+  display: grid;
+  gap: 14px;
+}
+/* Min tile widths give each card enough room for its text (notably the scene
+   stats line, which is nowrap and ~250px). Cards are intentionally roomy —
+   fewer per row beats cramped cards with clipped text. */
+.cx-grid-scene     { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+/* Performer min width is sized backwards from the stat row's fully-degraded
+   worst case ("99 cumshots · 999 plays · 99h" in 11px mono) so the fit ladder
+   always has a landing spot; 184px could still clip even hours-only rows. */
+.cx-grid-performer { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.cx-grid-studio    { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+/* Tag min matches the performer min: sized backwards from the stat row's
+   fully-degraded worst case so the fit ladder always has a landing spot. */
+.cx-grid-tag       { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+/* ============================================================ TILE (shared) */
+.cx-tile {
+  display: flex;
+  flex-direction: column;
+  /* WebKit's UA stylesheet applies `align-items: center` to <button>, and every
+     tile IS a button. In a column flex container that centres children on the
+     cross (horizontal) axis and sizes them to their CONTENT instead of
+     stretching - so .cx-tile-thumb, whose only child is a position:absolute
+     image, collapsed to 2px wide, and `aspect-ratio: 3/4` faithfully gave it
+     2px of height. Tiles rendered as bare text with no thumbnail. Chromium does
+     not do this, so it only ever showed up in the app and in Safari.
+     State both explicitly rather than relying on the UA default. */
+  align-items: stretch;
+  width: 100%;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: transform var(--dur-2);
+}
+.cx-tile:hover .cx-tile-thumb,
+.cx-tile:hover .cx-studio-logo {
+  border-color: var(--border-strong);
+}
+.cx-tile:hover .cx-tile-title { color: var(--fg-strong); }
+.cx-tile.is-selected .cx-tile-thumb,
+.cx-tile.is-selected .cx-studio-logo {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--coral-a-24);
+}
+.cx-tile.is-selected .cx-tile-title { color: var(--accent); }
+
+.cx-tile-thumb {
+  position: relative;
+  background: linear-gradient(135deg, #1d1218 0%, #14101a 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  transition: border-color var(--dur-2), box-shadow var(--dur-2);
+}
+.cx-thumb-16x9 { aspect-ratio: 16/9; }
+.cx-thumb-3x4  { aspect-ratio: 3/4; }
+.cx-thumb-1x1  { aspect-ratio: 1/1; }
+
+.cx-thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Performer portraits (3:4) have the head at the top — anchor the crop to the
+   top so it's never cut off; any overflow is taken from the bottom/sides. */
+.cx-thumb-3x4 .cx-thumb-img { object-position: top center; }
+/* Studio logos / tag icons: show the whole mark (don't crop), letting the
+   brand-tinted gradient behind it breathe. */
+.cx-contain-img {
+  object-fit: contain;
+  padding: 9%;
+  box-sizing: border-box;
+}
+
+.cx-thumb-ph {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: rgba(239, 107, 122, 0.20);
+  letter-spacing: -0.02em;
+}
+.cx-thumb-ph-large {
+  font-size: 38px;
+  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+}
+
+.cx-thumb-duration,
+.cx-thumb-res {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  background: rgba(10, 11, 15, 0.78);
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  z-index: 1;
+}
+.cx-thumb-duration { bottom: 6px; left: 6px; }
+.cx-thumb-res      { top: 6px; left: 6px; opacity: 0.85; }
+
+/* Cumshot count overlay pill. ONLY remaining user: DetailPanel's "Top scenes"
+   mini-thumbnails (a dense list with no stat row to move the count into). The
+   browse grid tiles (scene/performer/studio/tag) all show cumshots in their
+   stat line instead. */
+.cx-thumb-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(239, 107, 122, 0.92);
+  color: white;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  box-shadow: var(--shadow-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 1;
+}
+
+.cx-thumb-fav {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(10, 11, 15, 0.78);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+/* #1-by-cumshots trophy - top-right of the tile thumb, the grid counterpart of
+   the detail panel's gold rank pill. Same geometry as the favourite heart but
+   a SOLID gold circle (fully opaque by design) with an ink trophy. Performers
+   get one per gender side (the sides rank separately). */
+.cx-thumb-trophy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: var(--highlight);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+/* Scene tiles: the studio chip normally owns the top-right corner - slide it
+   left so the trophy keeps the corner on the one #1 tile. */
+.cx-tile-thumb.has-trophy .cx-thumb-studio {
+  right: 34px;
+  max-width: calc(60% - 28px);
+}
+
+/* Studio chip — top-right of the scene thumbnail, mirroring where Stash shows
+   the studio. Dark backdrop for legibility over the image, cream text +
+   clapperboard to keep the studio's visual language. Long names ellipsis. */
+.cx-thumb-studio {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  max-width: 60%;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #08090c;
+  color: var(--highlight);
+  border: none;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  z-index: 1;
+  transition: background var(--dur-2), color var(--dur-2);
+}
+/* Hover lights it up (cream invert) to signal it's a link to the studio - the
+   same affordance the studio pill uses elsewhere. */
+.cx-thumb-studio:hover { background: var(--highlight); color: var(--bg); }
+.cx-thumb-studio > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Tile body ---- */
+.cx-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 2px;
+}
+.cx-tile-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color var(--dur-2);
+}
+.cx-tile-meta,
+.cx-tile-stats {
+  font-size: 11px;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  min-width: 0;
+  /* Never let a long nowrap line bleed into the neighbouring card. */
+  overflow: hidden;
+}
+.cx-tile-meta > *,
+.cx-tile-stats > * {
+  flex-shrink: 0;
+}
+.cx-tile-meta > .cx-truncate,
+.cx-tile-stats > .cx-truncate {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cx-tile-stats { color: var(--fg-subtle); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* Justified stat row (performer tiles): distribute the segments across the full
+   card width - the "·" separators float evenly between them - so the row fills
+   the card the way the scene row fills its wider card naturally. Left-packed,
+   three short segments looked lost in the portrait card's corner. */
+.cx-tile-stats-fill { justify-content: space-between; }
+
+/* One-line title (performer tiles): names never wrap, keeping the portrait
+   rows aligned. Overflow goes through PerformerTile's fit ladder (a 3+ word
+   name drops its second word) before this ellipsis catches what's left. */
+.cx-tile-title-one {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cx-tile-sep { color: var(--fg-disabled); }
+.cx-tile-studio { color: var(--fg); font-weight: 500; }
+.cx-tile-ago { color: var(--fg-subtle); }
+
+/* Cumshots as the focal scene stat: coral droplet + count + uppercase label
+   (the app's signature metric). Replaces the thumbnail badge - cumshots is a
+   scene stat, so it belongs in the stat line. Label treatment mirrors the
+   TrendSummaryCard metric label, but coral. */
+/* Cumshots — the focal scene stat, rendered as running text ("6 cumshots") that
+   matches the rest of the line in size + weight; coral + the droplet icon are the
+   only differentiators. The icon is sized to the digits and nudged down (its
+   glyph rides high in the viewBox) so icon, count, and word share one line. */
+.cx-tile-cumshots { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); }
+.cx-tile-cumshots svg { transform: translateY(1px); }
+.cx-tile-cumshots-n { font-weight: 600; }
+
+/* Scene-tile pill row — reuse the shared .cx-pill language. Performer pills are
+   nested links (cx-pill's own hover applies); the +N overflow is a static count.
+   One nowrap line; long names clip at the row edge, not into the next card. */
+.cx-tile-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+.cx-tile-pills .cx-pill-more { cursor: default; }
+.cx-tile-pills .cx-pill-more:hover {
+  background: var(--bg-card-hover); border-color: var(--border); color: var(--fg-muted);
+}
+
+/* ============================================================ STUDIO / TAG art */
+.cx-studio-logo {
+  position: relative;
+  aspect-ratio: 1/1;
+  border-radius: 12px;
+  background: linear-gradient(140deg,
+    color-mix(in oklab, var(--studio-color) 30%, var(--bg-card)) 0%,
+    var(--bg-card) 85%);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  transition: border-color var(--dur-2), box-shadow var(--dur-2);
+}
+.cx-studio-thumb {
+  background: linear-gradient(140deg,
+    color-mix(in oklab, var(--studio-color) 28%, var(--bg-card)) 0%,
+    var(--bg-card) 82%);
+}
+.cx-studio-thumb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 28% 24%, color-mix(in oklab, var(--studio-color) 22%, transparent) 0%, transparent 55%),
+    repeating-linear-gradient(135deg, transparent 0 14px, rgba(255,255,255,0.012) 14px 15px);
+  pointer-events: none;
+}
+.cx-studio-initial {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--studio-color);
+  letter-spacing: -0.04em;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+.cx-detail-studio-logo .cx-studio-initial { font-size: 38px; }
+
+.cx-tag-thumb {
+  background: linear-gradient(140deg,
+    color-mix(in oklab, var(--tag-color) 16%, var(--bg-card)) 0%,
+    var(--bg-card) 78%);
+}
+.cx-tag-thumb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 26%, color-mix(in oklab, var(--tag-color) 18%, transparent) 0%, transparent 60%);
+  pointer-events: none;
+}
+.cx-tag-thumb :global(svg) { position: relative; z-index: 1; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.35)); }
+
+.cx-detail-tag-glyph {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  width: 92px;
+  height: 92px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg,
+    color-mix(in oklab, var(--tag-color) 22%, var(--bg)) 0%,
+    var(--bg) 80%);
+  border: 1px solid var(--border);
+}
+
+/* ============================================================ EMPTY STATE */
+.cx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 56px 20px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.cx-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-top: 6px;
+}
+.cx-empty-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+/* ============================================================ DETAIL PANEL */
+/* Drill-in view: a "← Back" control above the full-width detail. The detail is
+   the main content here (not a panel under a grid), so it sizes naturally and
+   the shell's .content scroller handles overflow. */
+.cx-drill {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cx-back-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 10px 5px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background var(--dur-2), color var(--dur-2), border-color var(--dur-2);
+}
+.cx-back-btn:hover {
+  color: var(--fg-strong);
+  background: var(--bg-card-hover);
+  border-color: var(--border);
+}
+
+.cx-detail {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cx-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.cx-detail-id {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1;
+}
+.cx-detail-thumb {
+  flex-shrink: 0;
+  width: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #1d1218 0%, #14101a 100%);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.cx-detail-thumb.cx-thumb-3x4 { width: 110px; }
+
+/* Performer detail runs taller than studio/tag because of its 3x4 portrait, so
+   it can overflow 16:9 with a scrollbar. Condense it slightly + contextually
+   (performer only) so it fills the viewport like the others — smaller portrait,
+   tighter section + header spacing. */
+.cx-detail-performer { gap: 10px; padding: 16px 22px; }
+.cx-detail-performer .cx-detail-head { padding-bottom: 12px; }
+.cx-detail-performer .cx-detail-thumb.cx-thumb-3x4 { width: 92px; }
+.cx-detail-performer .cx-detail-related { padding-top: 10px; }
+.cx-detail-studio-logo {
+  width: 92px;
+  height: 92px;
+  aspect-ratio: 1/1;
+  flex-shrink: 0;
+}
+.cx-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+  padding-top: 2px;
+}
+.cx-detail-eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-weight: 700;
+}
+.cx-detail-namerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cx-detail-name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--fg-strong);
+  line-height: 1.15;
+  margin: 0;
+}
+.cx-detail-sub {
+  font-size: 12px;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.cx-detail-sub > * { white-space: nowrap; }
+/* Entity pills — identical language to SceneCard / SessionDetail so a clickable
+   studio / performer reference looks the same everywhere in the app. */
+.cx-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill, 999px);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  transition: background var(--dur-2), border-color var(--dur-2), color var(--dur-2);
+}
+.cx-pill:hover { background: var(--bg); border-color: var(--border-strong); }
+/* Performer — neutral, accent on hover. */
+.cx-pill-performer:hover { color: var(--accent); border-color: var(--accent); }
+/* Studio — cream-tinted with the clapperboard glyph; inverts on hover. */
+.cx-pill-studio {
+  background: var(--highlight-soft);
+  border-color: var(--highlight);
+  color: var(--highlight);
+}
+.cx-pill-studio:hover {
+  background: var(--highlight);
+  color: var(--bg);
+  border-color: var(--highlight);
+}
+/* +N overflow chip - dashed + muted (mirrors SceneCard's overflow pill). */
+.cx-pill-more {
+  border-style: dashed;
+  color: var(--fg-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-detail-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cx-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--fg-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--dur-2), color var(--dur-2), border-color var(--dur-2);
+}
+.cx-btn-ghost:hover { color: var(--fg); background: var(--bg-card-hover); border-color: var(--border-strong); }
+.cx-btn-icon { padding: 6px; }
+
+/* ---- Stat strip ---- */
+.cx-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
+  gap: 10px;
+  padding-bottom: 4px;
+}
+.cx-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cx-detail-stat.is-top {
+  border-color: color-mix(in oklab, var(--highlight) 30%, var(--border));
+  background: linear-gradient(180deg, var(--bone-a-12) 0%, var(--bg) 70%);
+}
+.cx-detail-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.cx-detail-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px 2px 6px;
+  border-radius: 999px;
+  background: var(--bg-card-hover);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.cx-detail-rank.top {
+  background: var(--bone-a-12);
+  color: var(--highlight);
+}
+.cx-detail-rank :global(svg) { color: var(--highlight); }
+.cx-detail-stat-value {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.cx-detail-stat-value.accent { color: var(--accent); }
+.cx-detail-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Secondary "N tracked live" caption under the Cumshots value (Phase 7): how
+   many of the mirror total were logged inside Climax sessions vs imported. */
+.cx-detail-stat-sub {
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  color: var(--fg-faint, var(--fg-muted));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Period toggle ---- */
+.cx-detail-toggle { display: flex; justify-content: flex-end; }
+.cx-toggle {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
+}
+.cx-toggle button {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background var(--dur-2), color var(--dur-2);
+}
+.cx-toggle button:hover { color: var(--fg); }
+.cx-toggle button.active { background: var(--accent); color: #fff; }
+
+/* ---- Related scenes ---- */
+.cx-detail-related {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cx-detail-related-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-muted);
+  font-weight: 600;
+  margin: 0;
+}
+.cx-detail-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.cx-detail-related-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background var(--dur-2), border-color var(--dur-2);
+}
+.cx-detail-related-row:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
+.cx-related-thumb { width: 88px; flex-shrink: 0; }
+.cx-related-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cx-related-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cx-related-meta {
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

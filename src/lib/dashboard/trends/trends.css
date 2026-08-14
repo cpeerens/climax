@@ -1,0 +1,772 @@
+/* Trends page styles — Phase 6. Layered on the global tokens + browse.css
+   (which is bundled globally, so .cx-toggle / .cx-btn-ghost / .cx-pill* /
+   .cx-tile-sep are available here). All `cx-` namespaced, token-driven. Bar /
+   axis text mirrors BarChart.svelte: mono, tabular-nums, uppercase labels. */
+
+.cx-trends {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Shared card base (not defined in browse.css). */
+.cx-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+}
+
+/* ---- Toolbar: mode switch + reused date dropdown ---- */
+.cx-trends-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cx-segmented {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.cx-segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--dur-2), color var(--dur-2);
+}
+.cx-segmented button:hover { color: var(--fg); }
+.cx-segmented button.active { background: var(--accent); color: #fff; }
+
+/* Date chip (reuses the FilterBar look; popover anchored under it). */
+.cx-trends-date { position: relative; }
+.cx-trends-date-btn {
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 7px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-2), border-color var(--dur-2), color var(--dur-2);
+}
+.cx-trends-date-btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
+.cx-trends-date-btn.active { border-color: var(--accent); }
+.cx-trends-date-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+}
+
+/* ============================================================
+   SUMMARY CARDS (delta + sparkline)
+   ============================================================ */
+.cx-trends-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.cx-tsum {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px 12px;
+  overflow: hidden;
+}
+/* Cards are buttons — clicking one plots its metric on the trend chart below
+   (selection only; the saved default stays with the chart's Default pill). */
+button.cx-tsum {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color var(--dur-2);
+}
+.cx-tsum.primary { border-color: color-mix(in oklab, var(--accent) 35%, var(--border)); }
+.cx-tsum:not(.active):hover { border-color: var(--border-strong); }
+/* The plotted metric's card — border tinted in that metric's chart colour. */
+.cx-tsum.active { border-color: color-mix(in oklab, var(--tsum-color, var(--accent)) 55%, var(--border)); }
+.cx-tsum-head { display: flex; align-items: center; gap: 8px; }
+.cx-tsum-icon { display: grid; place-items: center; flex-shrink: 0; }
+.cx-tsum-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.cx-tsum-value {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+/* Rate line under the total: "0.33 per day · 1.6 per active day". Both readings
+   sit together rather than behind a toggle - they answer different questions (one
+   moves with the selected period, the other describes a day you actually used
+   Climax) and the pair measures ~200px at 11px, well inside the card. Deliberately
+   normal inline flow, NOT flex, so a long watch-time pair wraps to a second line
+   instead of widening the card. The number takes the metric's chart colour, same
+   as the heatmap's stats row. */
+.cx-tsum-rate {
+  margin-top: -2px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+.cx-tsum-rate b {
+  color: var(--tsum-color, var(--accent));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cx-tsum-rate .cx-tile-sep { margin: 0 3px; }
+.cx-tsum-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 11px;
+}
+.cx-delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.cx-delta.up   { color: var(--live); }
+.cx-delta.down { color: var(--danger); }
+.cx-delta.flat { color: var(--fg-subtle); font-weight: 600; }
+.cx-tsum-vs { color: var(--fg-subtle); }
+.cx-spark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 64px;
+  height: 28px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ============================================================
+   AREA TREND CHART
+   ============================================================ */
+.cx-trend-chart { padding: 16px 20px 14px; }
+.cx-trend-chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.cx-trend-chart-title { display: flex; flex-direction: column; gap: 3px; }
+/* Groups the "Default" pill with the metric toggle on the right of a chart head
+   (area chart + rankings). */
+.cx-trend-chart-controls { display: flex; align-items: center; gap: 10px; }
+.cx-trend-chart-title h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--fg-strong); line-height: 1.25; white-space: nowrap; }
+.cx-trend-chart-total {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.cx-area-wrap { position: relative; }
+.cx-area { width: 100%; height: 240px; display: block; }
+.cx-area-xaxis { position: relative; height: 16px; margin-top: 6px; }
+.cx-area-xlabel {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.cx-area-xlabel:first-child { transform: translateX(0); }
+.cx-area-xlabel:last-child { transform: translateX(-100%); }
+.cx-area-empty {
+  display: grid;
+  place-items: center;
+  height: 240px;
+  color: var(--fg-subtle);
+  font-size: 13px;
+}
+
+/* ============================================================
+   CONSISTENCY HEATMAP
+   ============================================================ */
+.cx-heatmap { padding: 16px 20px; }
+.cx-heatmap-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cx-heatmap-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--fg-strong); }
+.cx-heatmap-titles { display: flex; flex-direction: column; gap: 2px; }
+.cx-heatmap-sub { font-size: 11px; color: var(--fg-muted); }
+/* Right side of the header: metric toggle (+ Default pill) above the streaks. */
+.cx-heatmap-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+.cx-heatmap-streaks {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+/* Stat numbers follow the selected metric's colour (--hm-color, set by the
+   component) — coral on cumshots, white on watch time, bone on sessions. */
+.cx-heatmap-streaks b { color: var(--hm-color, var(--accent)); font-weight: 700; font-variant-numeric: tabular-nums; }
+.cx-heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
+.cx-heatmap-grid-wrap { min-width: max-content; width: 100%; }
+/* Tracks MUST match .cx-heatmap-grid exactly (same column width, same gap, same
+   left offset) so a label sits over its own week and the row is never wider than
+   the cells it labels. It used to use `cell + gap` columns with no gap and start
+   at --doww, which both drifted the labels one column right and left the row a
+   phantom column wider - and .cx-heatmap-grid-wrap's min-width:max-content turned
+   that excess straight into a horizontal scrollbar. */
+.cx-heatmap-months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--cell, 12px);
+  gap: var(--gap, 3px);
+  margin-left: calc(var(--doww, 28px) + var(--bodygap, 6px));
+  height: 14px;
+  margin-bottom: 8px;
+}
+.cx-heatmap-month {
+  font-size: 9px;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* Labels live in a one-CELL-wide grid column; without nowrap a year-marked
+     label ("JUN '25") wraps at the space and the grid paints over line two —
+     the year silently disappears. */
+  white-space: nowrap;
+}
+/* --bodygap is set inline by the component, which also subtracts it from the
+   cell-size budget. Keep the two in step - a bare literal here is what made the
+   row 6px wider than the width it was sized against. */
+.cx-heatmap-body { display: flex; gap: var(--bodygap, 6px); }
+.cx-heatmap-dow {
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell, 12px));
+  gap: var(--gap, 3px);
+  width: var(--doww, 28px);
+  font-size: 9px;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+}
+.cx-heatmap-dow span {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.cx-heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--cell, 12px);
+  gap: var(--gap, 3px);
+}
+.cx-heatmap-col {
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell, 12px));
+  gap: var(--gap, 3px);
+}
+.cx-hm-cell {
+  width: var(--cell, 12px);
+  height: var(--cell, 12px);
+  border-radius: 2px;
+  background: var(--bg-sunken);
+}
+/* Day cells are buttons (click → that day's sessions in Overview). */
+button.cx-hm-cell {
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  display: block;
+}
+button.cx-hm-cell:hover {
+  outline: 1px solid var(--hm-color, var(--accent));
+  outline-offset: 1px;
+}
+/* Tint follows the selected metric via --hm-color (set inline by the
+   component: cumshots coral · watch time white · sessions bone). */
+.cx-hm-cell.lv0 { background: #15171E; border: 1px solid #1c1f27; box-sizing: border-box; }
+.cx-hm-cell.lv1 { background: color-mix(in oklab, var(--hm-color, var(--accent)) 25%, var(--bg-card)); }
+.cx-hm-cell.lv2 { background: color-mix(in oklab, var(--hm-color, var(--accent)) 50%, var(--bg-card)); }
+.cx-hm-cell.lv3 { background: color-mix(in oklab, var(--hm-color, var(--accent)) 75%, var(--bg-card)); }
+.cx-hm-cell.lv4 { background: var(--hm-color, var(--accent)); }
+.cx-heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--fg-subtle);
+}
+.cx-heatmap-legend .cx-hm-cell { width: 11px; height: 11px; }
+
+/* ============================================================
+   PATTERN CHARTS (day-of-week / hour-of-day)
+   ============================================================ */
+.cx-trends-2col {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 12px;
+}
+.cx-pattern { padding: 16px 20px 12px; }
+.cx-pattern-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.cx-pattern-titles { display: flex; flex-direction: column; gap: 2px; }
+.cx-pattern-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--fg-strong); }
+.cx-pattern-sub { font-size: 11px; color: var(--fg-muted); }
+/* Compact toggle — these cards are half-width, so the metric buttons shrink
+   (same treatment as the leaderboard's gender toggle). */
+.cx-pattern-head .cx-toggle button { padding: 3px 9px; font-size: 10px; }
+/* Period suffix, styled like the area chart's "· <period>" total line. */
+.cx-pattern-period {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.cx-pattern-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  align-items: end;
+  height: 202px;
+}
+.cx-pcol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.cx-pcol-track {
+  width: 100%;
+  max-width: 26px;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* Column colour follows the selected metric via --pc-color (set inline by the
+   component): coral cumshots · white watch time · bone sessions. */
+.cx-pcol-bar {
+  width: 100%;
+  background: color-mix(in oklab, var(--pc-color, var(--accent)) 45%, var(--bg-card-hover));
+  border-radius: 3px 3px 0 0;
+  min-height: 3px;
+  transition: height var(--dur-3) var(--ease-out), background var(--dur-3);
+}
+.cx-pcol-bar.peak { background: var(--pc-color, var(--accent)); }
+.cx-pcol-label {
+  font-size: 9px;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.cx-pcol-val {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--fg-muted);
+  line-height: 12px;
+  min-height: 12px;
+  /* Watch-time values ("4h 12m") are wider than the column — overflow
+     centred rather than wrapping into a second line. */
+  white-space: nowrap;
+}
+.cx-pcol-val.hidden,
+.cx-pcol-label.hidden { visibility: hidden; }
+
+/* ============================================================
+   LEADERBOARDS
+   ============================================================ */
+.cx-leaders-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cx-leaders-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+.cx-leaders-period {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.cx-trends-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.cx-leaderboard { padding: 14px 18px; }
+.cx-lb-head {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+.cx-lb-head h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--fg-strong); }
+/* The performers board's female/male switch + its Default pill. */
+.cx-lb-head-controls { display: flex; align-items: center; gap: 8px; }
+.cx-lb-head-controls .cx-toggle button { padding: 3px 9px; font-size: 10px; }
+.cx-lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.cx-lb-empty { font-size: 12px; color: var(--fg-subtle); padding: 6px 0; }
+.cx-lb-row {
+  display: grid;
+  /* rank | name (1fr) | track (fixed) | value (fixed). Fixing the track AND
+     value widths is what fixes the staircased right edges (the value was `auto`
+     before, so it shifted the track per row). Track is a modest fixed width so
+     the bars are a little longer than the original stub without filling the
+     whole card. The 1fr name absorbs the extra width. */
+  grid-template-columns: 18px 1fr 96px 56px;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+/* Rows with movement badges get an extra narrow column after the rank. */
+.cx-lb-row.with-move { grid-template-columns: 18px 28px 1fr 96px 56px; }
+.cx-lb-rank {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg-subtle);
+  text-align: center;
+}
+/* Rank movement vs the previous period — sports-table style. */
+.cx-lb-move {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-subtle);
+  text-align: center;
+  white-space: nowrap;
+}
+.cx-lb-move.up    { color: var(--live); }
+.cx-lb-move.down  { color: var(--danger); }
+.cx-lb-move.fresh { color: var(--fg-subtle); font-style: italic; font-weight: 600; text-transform: lowercase; }
+/* Gold follows the RANK, not the row position - so every entity tied at #1
+   gets it, not just whichever one happened to sort first. */
+.cx-lb-rank.is-top { color: var(--highlight); }
+.cx-lb-name {
+  font-size: 12px;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cx-lb-row:hover .cx-lb-name { color: var(--accent); }
+.cx-lb-track {
+  height: 6px;
+  background: var(--bg-sunken);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.cx-lb-bar {
+  height: 100%;
+  background: var(--fg-strong);
+  border-radius: 3px;
+  transition: width var(--dur-3) var(--ease-out);
+}
+/* Bar colour follows the shared ranking metric (matches BarChart): cumshots
+   coral · watch time white · sessions bone. */
+.cx-lb-bar.metric-cumshots   { background: var(--accent); }
+.cx-lb-bar.metric-watch_time { background: var(--fg-strong); }
+.cx-lb-bar.metric-sessions   { background: var(--highlight); }
+.cx-lb-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   REPORT BUILDER
+   ============================================================ */
+.cx-report { display: flex; flex-direction: column; gap: 14px; }
+.cx-report-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+}
+.cx-report-field { display: flex; flex-direction: column; gap: 5px; }
+.cx-report-field label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.cx-report-by { font-size: 13px; color: var(--fg-subtle); padding-bottom: 9px; }
+.cx-report-export { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; }
+
+.cx-report-result { padding: 16px 20px; }
+.cx-report-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.cx-report-result-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--fg-strong); white-space: nowrap; }
+.cx-report-result-total {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* "· by week" suffix on an entity-drilled report's title. */
+.cx-report-gran {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+}
+.cx-report-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  /* max-height is set inline by ReportBuilder: measured from the viewport so
+     the list grows to fill the page before its scrollbar appears. */
+  overflow-y: auto;
+  /* Clear air between the value column and the scrollbar — without this the
+     right-aligned numbers sit flush under the bar. */
+  padding-right: 14px;
+}
+.cx-report-empty { font-size: 13px; color: var(--fg-subtle); padding: 24px 0; text-align: center; }
+.cx-report-bar-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 80px;
+  align-items: center;
+  gap: 12px;
+}
+.cx-report-bar-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.cx-report-bar-track {
+  height: 22px;
+  background: var(--bg-sunken);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.cx-report-bar {
+  height: 100%;
+  border-radius: 5px;
+  min-width: 2px;
+  transition: width var(--dur-3) var(--ease-out);
+  background: var(--accent);
+}
+.cx-report-bar.metric-cumshots   { background: var(--accent); }
+.cx-report-bar.metric-watch_time { background: var(--fg-strong); }
+.cx-report-bar.metric-sessions   { background: var(--highlight); }
+.cx-report-bar.metric-active     { background: var(--live); }
+.cx-report-bar-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---- Report entity picker (searchable "All / specific" popover) ---- */
+.cx-rpick { position: relative; }
+.cx-rpick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 150px;
+  max-width: 240px;
+  background: var(--bg-input, var(--bg-elevated));
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: border-color var(--dur-2);
+}
+.cx-rpick-btn:hover { border-color: var(--border-strong); }
+.cx-rpick-btn.specific { border-color: var(--coral-700); background: var(--coral-a-08); }
+.cx-rpick-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.cx-rpick-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 250px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong, var(--border));
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md, 8px);
+  padding: 4px;
+  animation: rpick-in 120ms var(--ease-out, ease-out);
+}
+@keyframes rpick-in {
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.cx-rpick-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.cx-rpick-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.cx-rpick-search input::placeholder { color: var(--fg-subtle); }
+.cx-rpick-list {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong, var(--border)) transparent;
+}
+.cx-rpick-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-2);
+}
+.cx-rpick-opt span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.cx-rpick-opt:hover { background: var(--bg-card-hover); }
+.cx-rpick-opt.selected { background: var(--coral-a-08); color: var(--fg-strong); }
+/* plain stylesheet (not Svelte-scoped) — no :global() needed */
+.cx-rpick-opt.selected svg { color: var(--accent); }
+.cx-rpick-none {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--fg-subtle);
+  text-align: center;
+}
+
+
+.cx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: background var(--dur-2), border-color var(--dur-2);
+}
+.cx-btn:hover { border-color: var(--border-strong); }
+.cx-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cx-btn-primary:hover { background: var(--accent-hover, var(--accent)); border-color: var(--accent-hover, var(--accent)); }
+.cx-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Responsive: stack the 2-col / 3-col rows on narrow content. */
+@media (max-width: 920px) {
+  .cx-trends-summary { grid-template-columns: repeat(2, 1fr); }
+  .cx-trends-2col, .cx-trends-3col { grid-template-columns: 1fr; }
+}

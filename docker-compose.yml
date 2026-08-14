@@ -1,0 +1,30 @@
+# Climax server - the common Docker path (see deploy/README.md for the full
+# reference). One service, one volume; set a token before exposing it.
+services:
+  climax:
+    build: .
+    # image: ghcr.io/pineapplestorm/climax-server:latest  # once published
+    container_name: climax
+    ports:
+      - "9998:9998"
+    volumes:
+      # The whole library (SQLite DB + settings) lives in /data. This named
+      # volume is what you back up (or use the web UI's backup download).
+      - climax-data:/data
+    environment:
+      # REQUIRED for anything beyond localhost: the shared token every client
+      # (browser, desktop app, bridge) presents. Pick something long and random.
+      - CLIMAX_TOKEN=change-me
+      # Your household timezone (IANA name), e.g. Europe/Berlin. Set this - the
+      # server files each session under its LOCAL day, so it must match where you
+      # actually are, or day boundaries (today, the heatmap, "crossed midnight")
+      # drift. UTC is only the fallback.
+      - TZ=Etc/UTC
+      # Extra hostnames allowed past the DNS-rebinding guard, comma-separated.
+      # IP literals, localhost, single-label names, and *.local always pass -
+      # only needed for public DNS names (e.g. a Tailscale ts.net name).
+      # - CLIMAX_ALLOWED_HOSTS=mynas.tailnet.ts.net
+    restart: unless-stopped
+
+volumes:
+  climax-data:

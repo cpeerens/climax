@@ -1,0 +1,24 @@
+# Keep the build context lean; the image builds the SPA + binary itself.
+# NOTE: bare "target" only matches the ROOT target/. The Rust build output also
+# lives at src-tauri/target (a stale 24GB dir on dev machines), so exclude target
+# and node_modules at ANY depth - otherwise Docker ships gigabytes of artifacts
+# as "context" (this hung an early build for 20 min transferring 24GB).
+target
+**/target
+node_modules
+**/node_modules
+build
+**/build
+.svelte-kit
+**/.svelte-kit
+.git
+.claude
+*.log
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+copy-review-*.html
+launch-*.vbs
+launch-*.bat
+scripts

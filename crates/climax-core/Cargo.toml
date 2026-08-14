@@ -1,0 +1,42 @@
+[package]
+name = "climax-core"
+version = "1.0.0"
+description = "Climax core engine - DB, models, settings, Stash client, aggregations, mirror/reconstruct, session engine. Tauri-free; depended on by the desktop app and (later) the headless server."
+authors = ["pineapplestorm"]
+edition = "2021"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database (async SQLite) - owns the migrations
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate", "chrono"] }
+
+# HTTP server (the /rpc + bridge WebSocket endpoint; moved in from the shell in
+# Phase 2b so the core crate is a complete headless server). axum/futures-util
+# are cross-platform, so core stays Linux/Docker-buildable.
+axum = { version = "0.7", features = ["macros", "json", "ws"] }
+futures-util = "0.3"
+
+# HTTP client (Stash GraphQL)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+
+# Error handling
+anyhow = "1"
+
+# NOTE (Phase 5): the embedded web UI (rust-embed of the SPA build) deliberately
+# does NOT live in this crate. A feature here would be unified into the DESKTOP
+# binary by any workspace-wide cargo command (features unify across packages),
+# silently growing the in-process server's HTTP surface. The embed + the /backup
+# route live in crates/climax-server; this crate only offers the `extra` router
+# hook on `server::spawn` and the unrouted `backup_download` handler.

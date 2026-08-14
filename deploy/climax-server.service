@@ -1,0 +1,30 @@
+# Climax server as a systemd service (bare-Linux deployment, no Docker).
+# See deploy/README.md. Install:
+#   sudo useradd --system --create-home climax
+#   sudo mkdir -p /var/lib/climax && sudo chown climax:climax /var/lib/climax
+#   sudo cp climax-server /usr/local/bin/
+#   sudo cp deploy/climax-server.service /etc/systemd/system/
+#   (edit the Environment lines below, especially CLIMAX_TOKEN)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now climax-server
+
+[Unit]
+Description=Climax server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=climax
+ExecStart=/usr/local/bin/climax-server
+Environment=CLIMAX_DATA_DIR=/var/lib/climax
+# Expose to the LAN + require a token (leave both unset for localhost-only):
+#Environment=CLIMAX_BIND=0.0.0.0
+#Environment=CLIMAX_TOKEN=change-me
+#Environment=CLIMAX_ALLOWED_HOSTS=
+# always, not on-failure: a web-UI restore/reset stages the change and exits
+# CLEANLY (code 0) expecting the supervisor to bring it back - on-failure would
+# leave the server down after one. (systemctl stop still stops it for good.)
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

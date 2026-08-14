@@ -1,0 +1,27 @@
+# Build output
+node_modules
+/build
+/.svelte-kit
+/package
+/target
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# The Climax library. It normally lives in your OS app-data folder, but never
+# commit one if it ends up here - it is your entire viewing history.
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Editor, OS and assistant scratch
+.DS_Store
+.vscode/
+.claude/
+__pycache__/
+*.log

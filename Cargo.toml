@@ -1,0 +1,15 @@
+# Cargo workspace for Climax (Phase 2b). Formalised when the standalone
+# `climax-server` binary arrived: the desktop shell (`src-tauri`), the Tauri-free
+# engine (`crates/climax-core`), and the headless server (`crates/climax-server`)
+# now share one target dir + one lockfile (this is the deliberate one-time
+# recompile noted in CLAUDE.md - the shared `target/` moved from `src-tauri/` to
+# the workspace root). The frontend tooling (package.json / vite) is unaffected;
+# this is a virtual manifest (no root package), so cargo ignores the root `src/`
+# (which is the Svelte app, not Rust).
+[workspace]
+resolver = "2"
+members = [
+    "src-tauri",
+    "crates/climax-core",
+    "crates/climax-server",
+]

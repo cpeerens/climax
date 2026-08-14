@@ -1,0 +1,18 @@
+-- Persist the moment a scene_play's tracked seconds last advanced (i.e. the
+-- video was actually playing), so the "currently watching" list in the tracker
+-- + Overview can be driven by authoritative backend state instead of a
+-- client-observed seconds delta.
+--
+-- The old approach diffed seconds_tracked across the frontend's own polls. That
+-- baseline lived in component-local state, so it RESET on every remount
+-- (switching to Overview, showing the tracker window) and FROZE while a window
+-- was hidden (WebView2 throttles background timers). A genuinely-playing scene
+-- could then take many seconds to reappear after navigating, or never (if
+-- playback fell between heartbeats). last_advance_at removes the client state:
+-- visibility = cumshot OR (now - last_advance_at <= grace), read fresh each poll.
+--
+-- Stamped = now on every heartbeat / remote credit that actually increments
+-- seconds_tracked. NULL = never advanced live (paused-only, or pre-migration
+-- history). No backfill: historical rows are not "currently playing", and the
+-- live session's scenes restamp on their next playing heartbeat.
+ALTER TABLE scene_plays ADD COLUMN last_advance_at INTEGER;

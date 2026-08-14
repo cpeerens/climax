@@ -1,0 +1,36 @@
+[package]
+name = "climax-server"
+version = "1.0.0"
+description = "Climax headless server - runs the core engine (DB, session, Stash mirror, /rpc + bridge WebSocket) as a standalone always-on process, no desktop client required. Phase 2b of the client-server pivot."
+authors = ["pineapplestorm"]
+edition = "2021"
+
+[dependencies]
+# The entire engine + the HTTP/WS server live here (Tauri-free).
+climax-core = { path = "../climax-core" }
+
+# Embedded web UI (Phase 5): the SvelteKit SPA build (repo-root `build/`) baked
+# into THIS binary (release; debug reads it from disk), served via the `extra`
+# router hook on core's server::spawn. Deliberately in this crate and NOT a
+# climax-core feature - cargo unifies features workspace-wide, which would leak
+# the web surface into the desktop binary. build.rs guarantees `build/` exists
+# so a bare `cargo check --workspace` compiles even before `npm run build`.
+axum = { version = "0.7", features = ["macros", "json", "ws"] }
+rust-embed = "8"
+mime_guess = "2"
+
+# Async runtime + signal handling for graceful shutdown.
+tokio = { version = "1", features = ["full"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+
+# Cross-platform data-dir resolution (replaces Tauri's app_data_dir): on Windows
+# this is %APPDATA% (= Roaming), matching the desktop app, so the standalone
+# server reads/writes the SAME climax.sqlite. On Linux/Docker it's
+# ~/.local/share, the natural headless home. Override with CLIMAX_DATA_DIR.
+dirs = "5"

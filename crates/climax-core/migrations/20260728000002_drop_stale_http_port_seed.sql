@@ -1,0 +1,18 @@
+-- Drop the vestigial `http_port` seed so the new default (9998) can apply.
+--
+-- The initial migration has always seeded ('http_port', '9876') into `settings`,
+-- but nothing ever read it - the desktop shell held a hardcoded constant. Making
+-- the port configurable meant adding `settings::get_http_port`, which reads that
+-- exact key, so the dead seed silently became live and outranked the new default:
+-- a fresh install would bind 9876 while the bridge, whose default moved in
+-- lockstep, looked for 9998. Nothing would connect, on precisely the installs
+-- with no user to notice a setting had been left behind.
+--
+-- Deleting rather than updating: absence IS the default, so this cannot go stale
+-- again the next time the default moves.
+--
+-- Guarded on the seeded value so an explicit choice is never discarded. Only
+-- `set_http_port` can write any other value, and it did not exist until now, so
+-- '9876' here is by definition the untouched seed and not a decision anyone made.
+-- Someone who genuinely wants 9876 sets it after this runs and keeps it.
+DELETE FROM settings WHERE key = 'http_port' AND value_json = '9876';

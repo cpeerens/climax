@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Climax",
+  "version": "1.0.0",
+  "identifier": "com.climax.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "tracker",
+        "title": "Climax",
+        "width": 480,
+        "height": 280,
+        "minWidth": 480,
+        "maxWidth": 640,
+        "minHeight": 150,
+        "maxHeight": 600,
+        "visible": false,
+        "decorations": false,
+        "transparent": false,
+        "fullscreen": false,
+        "resizable": false,
+        "center": false
+      },
+      {
+        "label": "dashboard",
+        "title": "Climax - Dashboard",
+        "url": "/dashboard",
+        "width": 1100,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 480,
+        "visible": false,
+        "decorations": true,
+        "transparent": false,
+        "fullscreen": false,
+        "resizable": true,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    },
+    "windows": {
+      "nsis": {
+        "customLanguageFiles": {
+          "English": "nsis/English.nsh"
+        },
+        "template": "nsis/installer.nsi"
+      }
+    }
+  }
+}
