@@ -1,14 +1,12 @@
-# Workflow name shown in the GitHub Actions
 name: 'Build and Push to GHCR'
 
-# Trigger the workflow when pushing a tag like: v1.0.0
 on:
   release:
     types: [ published ]
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
 
     steps:
       - name: Set up checkout
