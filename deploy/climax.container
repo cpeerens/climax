@@ -1,0 +1,17 @@
+[Unit]
+Description=Stats tracking for Stash
+StartLimitBurst=5
+StartLimitIntervalSec=90
+
+[Container]
+ContainerName=climax
+Image=ghcr.io/pineapplestorm/climax:1.0.0
+EnvironmentFile=.env
+PublishPort=9998:9998
+Volume=climax-data:/data
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

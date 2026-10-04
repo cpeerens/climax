@@ -16,8 +16,8 @@ vite.config.ts.timestamp-*
 
 # Local secrets
 .env
-.env.*
-!.env.example
+deploy/.env.example
+!deploy/.env.example
 
 # Editor, OS and assistant scratch
 .DS_Store

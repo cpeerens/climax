@@ -11,16 +11,17 @@ never required.
 
 ## Environment reference
 
-| Variable | Default | What it does |
-| --- | --- | --- |
-| `CLIMAX_DATA_DIR` | platform data dir | Where the SQLite database + settings live. In Docker this is `/data` - mount a volume there or a restart loses everything. |
-| `CLIMAX_PORT` | `9998` | HTTP port. |
-| `CLIMAX_BIND` | `127.0.0.1` | Bind address. Set `0.0.0.0` to be reachable from other devices (the Docker image already does; publishing the port is what actually exposes it). |
-| `CLIMAX_TOKEN` | unset | Shared auth token. When set, the data endpoints require it; the web UI prompts for it once and remembers it. Required in practice for anything beyond localhost - the server logs a loud warning if exposed without one. Note an unprotected server isn't just readable: anyone who can reach it can also restore or reset the database. |
-| `CLIMAX_ALLOWED_HOSTS` | unset | Comma-separated extra hostnames allowed past the DNS-rebinding guard. IP literals, `localhost`, single-label names, and `*.local` always pass; add public DNS names here (e.g. a Tailscale `ts.net` name). |
+| Variable               | Default           | What it does                                                                                                                                                                                                                                                                                                                             |
+|------------------------|-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CLIMAX_DATA_DIR`      | platform data dir | Where the SQLite database + settings live. In Docker this is `/data` - mount a volume there or a restart loses everything.                                                                                                                                                                                                               |
+| `CLIMAX_PORT`          | `9998`            | HTTP port.                                                                                                                                                                                                                                                                                                                               |
+| `CLIMAX_BIND`          | `127.0.0.1`       | Bind address. Set `0.0.0.0` to be reachable from other devices (the Docker image already does; publishing the port is what actually exposes it).                                                                                                                                                                                         |
+| `CLIMAX_TOKEN`         | unset             | Shared auth token. When set, the data endpoints require it; the web UI prompts for it once and remembers it. Required in practice for anything beyond localhost - the server logs a loud warning if exposed without one. Note an unprotected server isn't just readable: anyone who can reach it can also restore or reset the database. |
+| `CLIMAX_ALLOWED_HOSTS` | unset             | Comma-separated extra hostnames allowed past the DNS-rebinding guard. IP literals, `localhost`, single-label names, and `*.local` always pass; add public DNS names here (e.g. a Tailscale `ts.net` name).                                                                                                                               |
 
-## Docker
+## As a container
 
+### Docker
 Build and run from the repo root:
 
 ```
@@ -33,10 +34,23 @@ docker run -d --name climax \
   climax-server
 ```
 
-Or with compose (edit the token in `docker-compose.yml` first):
+### Docker Compose
+1. Rename `.env.example` to `.env`
+2. Change CLIMAX_TOKEN in `.env`
+3. Then run:
 
 ```
 docker compose up -d
+```
+
+### Podman quadlet
+1. Copy [docker-compose.yml] to `~/.config/containers/systemd/climax`
+2. Copy [.env.example] to the same location and rename it to `.env`
+3. Change the `CLIMAX_TOKEN` in *.env*, and optionally the TZ (timezone) as well
+4. Open a terminal and run:
+```
+systemctl --user daemon-reload
+systemctl --user start climax
 ```
 
 Then open `http://<host>:9998`, enter the token, and connect Stash under

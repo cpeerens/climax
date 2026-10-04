@@ -1,0 +1,18 @@
+# Climax server - the common Docker path (see deploy/README.md for the full
+# reference). One service, one volume; set a token before exposing it.
+services:
+  climax:
+    image: ghcr.io/pineapplestorm/climax:1.0.0
+    container_name: climax
+    ports:
+      - "9998:9998"
+    volumes:
+      # The whole library (SQLite DB + settings) lives in /data. This named
+      # volume is what you back up (or use the web UI's backup download).
+      - climax-data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  climax-data:
